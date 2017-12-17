@@ -54,10 +54,10 @@ public final class DelegatingIdlingResourceSchedulerTest {
     assertBusy();
   }
 
-  @Test public void scheduleWithNonZeroDelayReportsIdle() {
+  @Test public void scheduleWithNonZeroDelayReportsBusy() {
     Scheduler.Worker worker = scheduler.createWorker();
     worker.schedule(new CountingRunnable(), 1, SECONDS);
-    assertIdle(0);
+    assertBusy();
   }
 
   @Test public void schedulePeriodicallyWithZeroDelayReportsBusy() {
@@ -66,10 +66,10 @@ public final class DelegatingIdlingResourceSchedulerTest {
     assertBusy();
   }
 
-  @Test public void schedulePeriodicallyWithNonZeroDelayReportsIdle() {
+  @Test public void schedulePeriodicallyWithNonZeroDelayReportsBusy() {
     Scheduler.Worker worker = scheduler.createWorker();
     worker.schedulePeriodically(new CountingRunnable(), 1, 1, SECONDS);
-    assertIdle(0);
+    assertBusy();
   }
 
   @Test public void betweenPeriodicSchedulesReportsIdle() {

@@ -44,7 +44,7 @@ final class DelegatingIdlingResourceScheduler extends IdlingResourceScheduler {
         if (subscriptions.isUnsubscribed()) {
           return Subscriptions.unsubscribed();
         }
-        ScheduledWork work = createWork(action, 0L);
+        ScheduledWork work = createWork(action);
         Subscription subscription = delegateWorker.schedule(work);
         ScheduledWorkSubscription workSubscription =
             new ScheduledWorkSubscription(work, subscription);
@@ -56,7 +56,7 @@ final class DelegatingIdlingResourceScheduler extends IdlingResourceScheduler {
         if (subscriptions.isUnsubscribed()) {
           return Subscriptions.unsubscribed();
         }
-        ScheduledWork work = createWork(action, delayTime);
+        ScheduledWork work = createWork(action);
         Subscription subscription = delegateWorker.schedule(work, delayTime, unit);
         subscriptions.add(subscription);
         ScheduledWorkSubscription workSubscription =
@@ -71,7 +71,7 @@ final class DelegatingIdlingResourceScheduler extends IdlingResourceScheduler {
         if (subscriptions.isUnsubscribed()) {
           return Subscriptions.unsubscribed();
         }
-        ScheduledWork work = createWork(action, initialDelay);
+        ScheduledWork work = createWork(action);
         Subscription subscription =
             delegateWorker.schedulePeriodically(work, initialDelay, period, unit);
         subscriptions.add(subscription);
@@ -101,21 +101,16 @@ final class DelegatingIdlingResourceScheduler extends IdlingResourceScheduler {
     }
   }
 
-  ScheduledWork createWork(Action0 action, long delay) {
+  ScheduledWork createWork(Action0 action) {
     if (action instanceof ScheduledWork) {
       // Unwrap any re-scheduled work. We want each scheduler to get its own state machine.
       action = ((ScheduledWork) action).delegate;
     }
-    boolean immediate = delay == 0;
-    if (immediate) {
-      startWork();
-    }
-    int startingState = immediate ? ScheduledWork.STATE_SCHEDULED : ScheduledWork.STATE_IDLE;
-    return new ScheduledWork(action, startingState);
+    startWork();
+    return new ScheduledWork(action, ScheduledWork.STATE_SCHEDULED);
   }
 
   final class ScheduledWork extends AtomicInteger implements Action0 {
-    static final int STATE_IDLE = 0; // --> STATE_RUNNING, STATE_UNSUBSCRIBED
     static final int STATE_SCHEDULED = 1; // --> STATE_RUNNING, STATE_UNSUBSCRIBED
     static final int STATE_RUNNING = 2; // --> STATE_COMPLETED, STATE_UNSUBSCRIBED
     static final int STATE_COMPLETED = 3; // --> STATE_UNSUBSCRIBED
@@ -132,12 +127,8 @@ final class DelegatingIdlingResourceScheduler extends IdlingResourceScheduler {
       for (;;) {
         int state = get();
         switch (state) {
-          case STATE_IDLE:
           case STATE_SCHEDULED:
             if (compareAndSet(state, STATE_RUNNING)) {
-              if (state == STATE_IDLE) {
-                startWork();
-              }
               try {
                 delegate.call();
               } finally {
